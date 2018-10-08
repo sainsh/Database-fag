@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * Implements hook_menu
+ * */
+function zbc_fetch_easj_menu() {
+  $items = array();
+
+  $items['zbc_fetch_easj'] = array(
+    'title' => 'Hapsede dette',
+    'description' => 'hent noget data og vis det - gem det eventuelt.',
+    'page callback' => 'zbc_fetch_easj_display',
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access content'),
+  );
+	return $items;
+}
+
+/**
+ * Get some data from somewhere and display it
+ * @param: none
+ * @return a table of values
+ */
+function zbc_fetch_easj_display() {
+	/* Swagger tells you to get the data like this
+  curl -X GET --header 'Accept: application/json' --header 'Authorization: key ttn-account-v2.QVANNgiNmbywCLxBtSSaU05qEeRHnJyDKoT3_4zjSz0' 'https://zbc_test.data.thethingsnetwork.org/api/v2/query?last=24h'
+	but you choose to get it like this
+  */
+  
+  $conn =new mysqli("localhost:33067","admin","admin","databasefag");
+  
+	if($conn->connect_error){
+		
+		die("Connection failed: " . $conn->connect_error);
+		echo "connection error";
+		
+	}
+	echo "Connected succussfully";
+ 
+  
+  $response =  drupal_http_request('https://zbc_test.data.thethingsnetwork.org/api/v2/query?last=24h', array('timeout' => 7, 'headers' => array('Accept' => 'application/json', 'Authorization' => 'key ttn-account-v2.QVANNgiNmbywCLxBtSSaU05qEeRHnJyDKoT3_4zjSz0')));
+	;
+	// Let's just display it in a table
+	$header = array("Device id","Raw","Temp","Time");
+	$rows = drupal_json_decode($response->data);
+	foreach($rows as $row){
+	
+		$sql = "INSERT INTO tempdata (DeviceID, Raw, Temperature, Time) VALUES('" . $row["device_id"] . "', '" . $row["raw"] . "', ". $row['temp'] . ", '" . $row["time"] . "');" ;
+					
+		mysqli_query($conn, $sql);
+		
+		
+	}
+	$rows = mysqli_query($conn, "SELECT * FROM tempdata");
+	
+	
+	
+	return theme('table', array('header'=>$header, 'rows'=> $rows)) ;//theme('table', array('header'=>$header, 'rows'=>$rows));
+	// You'll find the data at /zbc_fetch_easj, like http://vertikal.dk/zbc_fetch
+}
